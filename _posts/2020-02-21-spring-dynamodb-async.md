@@ -2,6 +2,8 @@
 layout: default
 title:  "Spring Webflux with Async DynamoDB"
 date:   2020-02-21 15:14:54
+tags:   ["spring","dynamodb", "async"]
+repository_url: https://github.com/yegor-bond/poc/tree/master/spring-dynamodb-async 
 ---
 ## Overview
 
@@ -143,6 +145,73 @@ public class DynamoDbService {
                 .build();
 
         return client.createTable(request);
+    }
+}
+```
+## Reactive REST Controller
+A simple controller with GET method for retrieving event by id and POST method for saving events in DynamoDB. 
+We can do it in two ways - implement it with annotations or get rid of annotations and do it in functional way.
+There is no performance impact, in 99% cases it is absolutely based on individual preference what to use. 
+##### Annotated Controllers
+```java
+@RestController
+@RequestMapping("/event")
+public class SimpleController {
+
+    final DynamoDbService dynamoDbService;
+
+    public SimpleController(DynamoDbService dynamoDbService) {
+        this.dynamoDbService = dynamoDbService;
+    }
+
+    @GetMapping(value = "/{eventId}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public Mono<Optional<Event>> getEvent(@PathVariable String eventId) {
+        CompletableFuture<Optional<Event>> eventFuture = dynamoDbService.getEvent(eventId);
+        return Mono.fromCompletionStage(eventFuture);
+    }
+
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+    public void saveEvent(@RequestBody Event event) {
+        dynamoDbService.saveEvent(event);
+    }
+}
+```
+##### Functional Endpoints
+This is a lightweight functional programming model in which functions are used to route and handle requests.
+```java
+@Configuration
+public class HttpRouter {
+
+    @Bean
+    public RouterFunction<ServerResponse> eventRouter(DynamoDbService dynamoDbService) {
+        EventHandler eventHandler = new EventHandler(dynamoDbService);
+        return RouterFunctions
+                .route(GET("/eventfn/{id}")
+                        .and(accept(APPLICATION_JSON)), eventHandler::getEvent)
+                .andRoute(POST("/eventfn")
+                        .and(accept(APPLICATION_JSON))
+                        .and(contentType(APPLICATION_JSON)), eventHandler::saveEvent);
+    }
+
+    static class EventHandler {
+        private final DynamoDbService dynamoDbService;
+
+        public EventHandler(DynamoDbService dynamoDbService) {
+            this.dynamoDbService = dynamoDbService;
+        }
+
+        Mono<ServerResponse> getEvent(ServerRequest request) {
+            String eventId = request.pathVariable("id");
+            CompletableFuture<Event> eventGetFuture = dynamoDbService.getEvent(eventId);
+            Mono<Event> eventMono = Mono.fromFuture(eventGetFuture);
+            return ServerResponse.ok().body(eventMono, Event.class);
+        }
+
+        Mono<ServerResponse> saveEvent(ServerRequest request) {
+            Mono<Event> eventMono = request.bodyToMono(Event.class);
+            eventMono.map(dynamoDbService::saveEvent);
+            return ServerResponse.ok().build();
+        }
     }
 }
 ```
