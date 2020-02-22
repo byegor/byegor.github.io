@@ -72,19 +72,21 @@ Of course all operations implemented in async way.
 ```java
 @Service
 public class DynamoDbService {
+
     public static final String TABLE_NAME = "events";
     public static final String ID_COLUMN = "id";
     public static final String BODY_COLUMN = "body";
 
     final DynamoDbAsyncClient client;
 
+    @Autowired
     public DynamoDbService(DynamoDbAsyncClient client) {
         this.client = client;
     }
 
+    //Creating table on startup if not exists
     @PostConstruct
     public void createTableIfNeeded() throws ExecutionException, InterruptedException {
-        // check if table is already present
         ListTablesRequest request = ListTablesRequest.builder().exclusiveStartTableName(TABLE_NAME).build();
         CompletableFuture<ListTablesResponse> listTableResponse = client.listTables(request);
 
@@ -92,13 +94,13 @@ public class DynamoDbService {
                 .thenCompose(response -> {
                     boolean tableExist = response.tableNames().contains(TABLE_NAME);
                     if (!tableExist) {
-                        //if table not present - create it
                         return createTable();
                     } else {
                         return CompletableFuture.completedFuture(null);
                     }
                 });
-        // wait for table creation
+
+        //Wait in synchronous manner for table creation
         createTableRequest.get();
     }
 
@@ -115,7 +117,7 @@ public class DynamoDbService {
         return client.putItem(putItemRequest);
     }
 
-    public CompletableFuture<Optional<Event>> getEvent(String id) {
+    public CompletableFuture<Event> getEvent(String id) {
         Map<String, AttributeValue> key = new HashMap<>();
         key.put(ID_COLUMN, AttributeValue.builder().s(id).build());
 
@@ -127,18 +129,20 @@ public class DynamoDbService {
 
         return client.getItem(getRequest).thenApply(item -> {
             if (!item.hasItem()) {
-                return Optional.empty();
+                return null;
             } else {
                 Map<String, AttributeValue> itemAttr = item.item();
                 String body = itemAttr.get(BODY_COLUMN).s();
-                return Optional.of(new Event(id, body));
+                return new Event(id, body);
             }
         });
     }
 
     private CompletableFuture<CreateTableResponse> createTable() {
+
         CreateTableRequest request = CreateTableRequest.builder()
                 .tableName(TABLE_NAME)
+
                 .keySchema(KeySchemaElement.builder().attributeName(ID_COLUMN).keyType(KeyType.HASH).build())
                 .attributeDefinitions(AttributeDefinition.builder().attributeName(ID_COLUMN).attributeType(ScalarAttributeType.S).build())
                 .billingMode(BillingMode.PAY_PER_REQUEST)
@@ -156,17 +160,17 @@ There is no performance impact, in 99% cases it is absolutely based on individua
 ```java
 @RestController
 @RequestMapping("/event")
-public class SimpleController {
+public class AnnotatedController {
 
     final DynamoDbService dynamoDbService;
 
-    public SimpleController(DynamoDbService dynamoDbService) {
+    public AnnotatedController(DynamoDbService dynamoDbService) {
         this.dynamoDbService = dynamoDbService;
     }
 
     @GetMapping(value = "/{eventId}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public Mono<Optional<Event>> getEvent(@PathVariable String eventId) {
-        CompletableFuture<Optional<Event>> eventFuture = dynamoDbService.getEvent(eventId);
+    public Mono<Event> getEvent(@PathVariable String eventId) {
+        CompletableFuture<Event> eventFuture = dynamoDbService.getEvent(eventId);
         return Mono.fromCompletionStage(eventFuture);
     }
 

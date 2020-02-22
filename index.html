@@ -1,18 +1,14 @@
 ---
 layout: default
+title: Blog
 ---
+<h1>Latest Posts</h1>
 
-<div class="page clearfix" index>
-    <div class="left">
-        <h1>Welcome to HyG's Blog!</h1>
-        <small>small</small>
-        <hr>
-        <ul>
-            {% for post in site.posts %}
-            <li>
-                <a href="{{ post.url }}">{{ post.title }}</a>
-            </li>
-            {% endfor %}
-        </ul>
-    </div>
-</div>
+<ul>
+    {% for post in site.posts %}
+    <li>
+        <h2><a href="{{ post.url }}">{{ post.title }}</a></h2>
+        <!--<p>{{ post.excerpt }}</p>-->
+    </li>
+    {% endfor %}
+</ul>
