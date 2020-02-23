@@ -4,11 +4,11 @@ title:  "Spring Webflux with Async DynamoDB"
 date:   2020-02-21 15:14:54
 tags:   [spring,dynamodb, async]
 repository_url: https://github.com/yegor-bond/poc/tree/master/spring-dynamodb-async
-short: Starting from Spring Boot 2.0 (Spring framework 5.0), the framework provides support for asynchronous programming, 
+short: Starting from Spring framework 5.0 and Spring Boot 2.0, the framework provides support for asynchronous programming, 
        so does AWS SDK starting with 2.0 version.  
 ---
 ## 1. Overview
-Starting from Spring Boot 2.0 (Spring framework 5.0), the framework provides support for asynchronous programming, 
+Starting from Spring framework 5.0 and Spring Boot 2.0, the framework provides support for asynchronous programming, 
 so does AWS SDK starting with 2.0 version. 
 
 In this post i will be exploring using asynchronous DynamoDB API 
