@@ -36,7 +36,7 @@ Let's start with Maven dependencies for WebFlux and DynamoDB SDK
 ```
 ## 3. DynamoDB
 
-### 3.1 Spring configuration
+### 3.1 Spring Configuration
 
 ```java
 @Configuration
@@ -67,11 +67,12 @@ public class AppConfig {
     }
 }
 ```
-### 3.2 Reactive DynamoDB service
+
+### 3.2 Reactive DynamoDB Service
 Unfortunately, second version of AWS SDK doesn’t have support for DynamoDBMapper yet
 (you can track mapper’s readiness [here](https://github.com/aws/aws-sdk-java-v2/issues/35)), 
 so table creation, sending requests and parsing responses need to be done by “low level” API.
-Of course all operations implemented in async way.
+
 ```java
 @Service
 public class DynamoDbService {
@@ -158,7 +159,8 @@ public class DynamoDbService {
 ## 4. Reactive REST Controller
 A simple controller with GET method for retrieving event by id and POST method for saving events in DynamoDB. 
 We can do it in two ways - implement it with annotations or get rid of annotations and do it in functional way.
-There is no performance impact, in 99% cases it is absolutely based on individual preference what to use. 
+There is no performance impact, in almost most cases it is absolutely based on individual preference what to use.
+ 
 ### 4.1 Annotated Controllers
 ```java
 @RestController
@@ -222,6 +224,123 @@ public class HttpRouter {
     }
 }
 ```
+## 5. Spring DynamoDB Integration Test
 
+For running integration test with DynamoDB we need DynamoDBLocal dependency
+```xml
+<dependency>
+    <groupId>com.amazonaws</groupId>
+    <artifactId>DynamoDBLocal</artifactId>
+    <version>1.12.0</version>
+    <scope>test</scope>
+</dependency>
 
+<build>
+    <plugins>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-dependency-plugin</artifactId>
+            <version>2.10</version>
+            <executions>
+                <execution>
+                    <id>copy</id>
+                    <phase>test-compile</phase>
+                    <goals>
+                        <goal>copy-dependencies</goal>
+                    </goals>
+                    <configuration>
+                        <includeScope>test</includeScope>
+                        <includeTypes>so,dll,dylib</includeTypes>
+                        <!--Keen an eye on output directory - it will be used for starting dynamodb-->
+                        <outputDirectory>${project.basedir}/target/native-libs</outputDirectory>
+                    </configuration>
+                </execution>
+            </executions>
+        </plugin>
+    </plugins>
+</build>
 
+<repositories>
+    <repository>
+        <id>dynamodb-local-oregon</id>
+        <name>DynamoDB Local Release Repository</name>
+        <url>https://s3-us-west-2.amazonaws.com/dynamodb-local/release</url>
+    </repository>
+</repositories>
+```
+Now we need to start DynamoDB before test run. I prefer to do it as JUnit Class Rule, but 
+we can also do it as a spring bean.
+
+```java
+public class LocalDynamoDbRule extends ExternalResource {
+
+    protected DynamoDBProxyServer server;
+
+    public LocalDynamoDbRule() {
+        //here we set the path from "outputDirectory" of maven-dependency-plugin
+        System.setProperty("sqlite4java.library.path", "target/native-libs");
+    }
+
+    @Override
+    protected void before() throws Exception {
+        this.server = ServerRunner
+            .createServerFromCommandLineArgs(new String[]{"-inMemory", "-port", "8000"});
+        server.start();
+    }
+
+    @Override
+    protected void after() {
+        this.stopUnchecked(server);
+    }
+
+    protected void stopUnchecked(DynamoDBProxyServer dynamoDbServer) {
+        try {
+            dynamoDbServer.stop();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+}
+```
+Now we can create an integration test and test get event by id and save event.
+```java
+@RunWith(SpringRunner.class)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+public class IntegrationTest {
+
+    @ClassRule
+    public static LocalDynamoDbRule dynamoDbRule = new LocalDynamoDbRule();
+
+    @Autowired
+    private WebTestClient webTestClient;
+
+    @Test
+    public void getEvent() {
+        // Create a GET request to test an endpoint
+        webTestClient
+                .get().uri("/event/1")
+                .accept(MediaType.APPLICATION_JSON)
+                .exchange()
+                // and use the dedicated DSL to test assertions against the response
+                .expectStatus().isOk()
+                .expectBody(String.class).isEqualTo(null);
+    }
+
+    @Test
+    public void saveEvent() throws InterruptedException {
+        Event event = new Event("10", "event");
+        webTestClient
+                .post().uri("/event/")
+                .body(BodyInserters.fromValue(event))
+                .exchange()
+                .expectStatus().isOk();
+        Thread.sleep(1500);
+        webTestClient
+                .get().uri("/event/10")
+                .accept(MediaType.APPLICATION_JSON)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(Event.class).isEqualTo(event);
+    }
+}
+```
