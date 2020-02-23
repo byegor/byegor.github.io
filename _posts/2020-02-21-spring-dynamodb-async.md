@@ -2,20 +2,23 @@
 layout: default
 title:  "Spring Webflux with Async DynamoDB"
 date:   2020-02-21 15:14:54
-tags:   ["spring","dynamodb", "async"]
-repository_url: https://github.com/yegor-bond/poc/tree/master/spring-dynamodb-async 
+tags:   [spring,dynamodb, async]
+repository_url: https://github.com/yegor-bond/poc/tree/master/spring-dynamodb-async
+short: Starting from Spring Boot 2.0 (Spring framework 5.0), the framework provides support for asynchronous programming, 
+       so does AWS SDK starting with 2.0 version.  
 ---
-## Overview
-
+## 1. Overview
 Starting from Spring Boot 2.0 (Spring framework 5.0), the framework provides support for asynchronous programming, 
-so does AWS SDK starting with 2.0 version. In this post i will be exploring using asynchronous DynamoDB API 
+so does AWS SDK starting with 2.0 version. 
+
+In this post i will be exploring using asynchronous DynamoDB API 
 and Spring Webflux by building simple reactive REST application. 
 Let’s say we need to handle HTTP requests for retrieving or storing some Event(id:string, body: string). 
 Event will be stored in DynamoDB.
 
 It might be easier to simply look at the [code on Github](https://github.com/yegor-bond/poc/tree/master/spring-dynamodb-async) and follow it there.
 
-## Dependencies
+## 2. Dependencies
 Let's start with Maven dependencies for WebFlux and DynamoDB SDK
 ```xml
 <dependencies>
@@ -31,9 +34,9 @@ Let's start with Maven dependencies for WebFlux and DynamoDB SDK
     </dependency>
 </dependencies>
 ```
-## DynamoDB
+## 3. DynamoDB
 
-### Spring configuration
+### 3.1 Spring configuration
 
 ```java
 @Configuration
@@ -64,7 +67,7 @@ public class AppConfig {
     }
 }
 ```
-### Reactive DynamoDB service
+### 3.2 Reactive DynamoDB service
 Unfortunately, second version of AWS SDK doesn’t have support for DynamoDBMapper yet
 (you can track mapper’s readiness [here](https://github.com/aws/aws-sdk-java-v2/issues/35)), 
 so table creation, sending requests and parsing responses need to be done by “low level” API.
@@ -152,11 +155,11 @@ public class DynamoDbService {
     }
 }
 ```
-## Reactive REST Controller
+## 4. Reactive REST Controller
 A simple controller with GET method for retrieving event by id and POST method for saving events in DynamoDB. 
 We can do it in two ways - implement it with annotations or get rid of annotations and do it in functional way.
 There is no performance impact, in 99% cases it is absolutely based on individual preference what to use. 
-##### Annotated Controllers
+### 4.1 Annotated Controllers
 ```java
 @RestController
 @RequestMapping("/event")
@@ -180,7 +183,7 @@ public class AnnotatedController {
     }
 }
 ```
-##### Functional Endpoints
+#### 4.2 Functional Endpoints
 This is a lightweight functional programming model in which functions are used to route and handle requests.
 ```java
 @Configuration
@@ -219,3 +222,6 @@ public class HttpRouter {
     }
 }
 ```
+
+
+
