@@ -7,7 +7,12 @@ repository_url: https://github.com/yegor-bond/poc/tree/master/spring-dynamodb-as
 short: Starting from Spring framework 5.0 and Spring Boot 2.0, the framework provides support for asynchronous programming, 
        so does AWS SDK starting with 2.0 version.  
 ---
+{:refdef: style="text-align: center;"}
+![](/assets/spring_boot_dynamo.png)
+{: refdef}
+
 ## 1. Overview
+
 Starting from Spring framework 5.0 and Spring Boot 2.0, the framework provides support for asynchronous programming, 
 so does AWS SDK starting with 2.0 version. 
 
