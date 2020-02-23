@@ -344,3 +344,6 @@ public class IntegrationTest {
     }
 }
 ```
+
+## 6. Conclusion
+In this article, we've learnt how to use and test async AWS API together with Spring WebFlux.
