@@ -2,7 +2,7 @@
 layout: default
 title:  "Spring Webflux with Async DynamoDB"
 date:   2020-02-21 15:14:54
-tags:   [spring,dynamodb, async]
+tags:   [spring, dynamodb, async]
 repository_url: https://github.com/yegor-bond/poc/tree/master/spring-dynamodb-async
 short: Starting from Spring framework 5.0 and Spring Boot 2.0, the framework provides support for asynchronous programming, 
        so does AWS SDK starting with 2.0 version.  
@@ -11,7 +11,7 @@ short: Starting from Spring framework 5.0 and Spring Boot 2.0, the framework pro
 ![](/assets/spring_boot_dynamo.png)
 {: refdef}
 
-## 1. Overview
+# 1. Overview
 
 Starting from Spring framework 5.0 and Spring Boot 2.0, the framework provides support for asynchronous programming, 
 so does AWS SDK starting with 2.0 version. 
@@ -23,8 +23,10 @@ Event will be stored in DynamoDB.
 
 It might be easier to simply look at the [code on Github](https://github.com/yegor-bond/poc/tree/master/spring-dynamodb-async) and follow it there.
 
-## 2. Dependencies
+# 2. Dependencies
+
 Let's start with Maven dependencies for WebFlux and DynamoDB SDK
+
 ```xml
 <dependencies>
     <dependency>
@@ -39,9 +41,12 @@ Let's start with Maven dependencies for WebFlux and DynamoDB SDK
     </dependency>
 </dependencies>
 ```
-## 3. DynamoDB
+# 3. DynamoDB
 
-### 3.1 Spring Configuration
+###### 3.1 Spring Configuration
+
+A simple config were we set up connection to DynamoDB. For test purpose we need to specify `dynamoEndpoint` and for
+real application we need to specify aws region.
 
 ```java
 @Configuration
@@ -73,11 +78,25 @@ public class AppConfig {
 }
 ```
 
-### 3.2 Reactive DynamoDB Service
+`application.yaml` with connection details
+```yaml
+aws:
+  accessKey: any
+  secretKey: any
+dynamodb:
+  endpoint: http://localhost:8000/
+```
+
+###### 3.2 Reactive DynamoDB Service
+
 Unfortunately, second version of AWS SDK doesn’t have support for DynamoDBMapper yet
 (you can track mapper’s readiness [here](https://github.com/aws/aws-sdk-java-v2/issues/35)), 
 so table creation, sending requests and parsing responses need to be done by “low level” API.
 
+In `DynamoDbService` we gonna:
+ - Create table if its not exists
+ - Implement methods for saving and retrieving event
+ 
 ```java
 @Service
 public class DynamoDbService {
@@ -161,12 +180,13 @@ public class DynamoDbService {
     }
 }
 ```
-## 4. Reactive REST Controller
+# 4. Reactive REST Controller
 A simple controller with GET method for retrieving event by id and POST method for saving events in DynamoDB. 
 We can do it in two ways - implement it with annotations or get rid of annotations and do it in functional way.
 There is no performance impact, in almost most cases it is absolutely based on individual preference what to use.
  
-### 4.1 Annotated Controllers
+###### 4.1 Annotated Controllers
+
 ```java
 @RestController
 @RequestMapping("/event")
@@ -190,7 +210,7 @@ public class AnnotatedController {
     }
 }
 ```
-#### 4.2 Functional Endpoints
+###### 4.2 Functional Endpoints
 This is a lightweight functional programming model in which functions are used to route and handle requests.
 ```java
 @Configuration
@@ -229,9 +249,11 @@ public class HttpRouter {
     }
 }
 ```
-## 5. Spring DynamoDB Integration Test
+# 5. Spring DynamoDB Integration Test
 
-For running integration test with DynamoDB we need DynamoDBLocal dependency
+###### 5.1 Maven dependencies
+For running integration test with DynamoDB we need DynamoDBLocal, which is not really the DynamoDB, but SQLite with
+implemented DynamoDB interfaces on top of it.
 ```xml
 <dependency>
     <groupId>com.amazonaws</groupId>
@@ -273,6 +295,7 @@ For running integration test with DynamoDB we need DynamoDBLocal dependency
     </repository>
 </repositories>
 ```
+###### 5.2 DynamoDB server
 Now we need to start DynamoDB before test run. I prefer to do it as JUnit Class Rule, but 
 we can also do it as a spring bean.
 
@@ -307,6 +330,7 @@ public class LocalDynamoDbRule extends ExternalResource {
     }
 }
 ```
+###### 5.3 Running test
 Now we can create an integration test and test get event by id and save event.
 ```java
 @RunWith(SpringRunner.class)
@@ -350,5 +374,5 @@ public class IntegrationTest {
 }
 ```
 
-## 6. Conclusion
+# 6. Conclusion
 In this article, we've learnt how to use and test async AWS API together with Spring WebFlux.
