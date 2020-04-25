@@ -1,6 +1,6 @@
 ---
 layout: default
-title: "Java DynamoDB Client using Micronaut and GraalVM"
+title: "DynamoDB Client using Micronaut and GraalVM"
 date:   2020-04-10 21:14
 description: How to build Async DynamoDB client with Micronaut and Maven, build a native image with GraalVM  
 repository_url: https://github.com/byegor/poc/tree/master/micronaut-dynamodb-async
